@@ -2,8 +2,10 @@
 --20205029--
 --Viet-Nhat-02--
 
+--Tạo cơ sở dữ liệu QLKH
 create database QLKH;
 
+-- tạo bảng giảng viên
 create table QLKH.dbo.Giangvien
 (
 	"GV#" char(5) primary key,
@@ -12,6 +14,7 @@ create table QLKH.dbo.Giangvien
 	DiaChi nvarchar(50)
 );
 
+-- Tạo bảng Đề tài
 create table QLKH.dbo.Detai
 (
 	"DT#" char(4) primary key,
@@ -19,6 +22,7 @@ create table QLKH.dbo.Detai
 	TheLoai nvarchar(20)
 );
 
+-- Tạo bảng Sinh viên
 create table QLKH.dbo.Sinhvien
 (
 	"SV#" char(4) primary key,
@@ -28,6 +32,7 @@ create table QLKH.dbo.Sinhvien
 	Lop nvarchar(20)
 );
 
+-- Tạo bảng Hướng dẫn
 create table QLKH.dbo.Huongdan
 (
 	"GV#" char(5),
@@ -40,6 +45,7 @@ create table QLKH.dbo.Huongdan
 	foreign key ("DT#") references QLKH.dbo.Detai("DT#")
 );
 
+--Insert dữ liệu vào 4 bảng đã tạo
 insert into QLKH.dbo.Giangvien values 
 ('GV001', N'Nguyen Van A','1967',N'Hà Đông Hà Nội'),
 ('GV002', N'Nguyen Van B','1967',N'Hà Đông Hà Nội'),
@@ -82,7 +88,6 @@ insert into QLKH.dbo.Sinhvien values
 ('SV14',N'Phạm Văn N','1991-1-3',N'Nam Định', 'VN_04'),
 ('SV15',N'Phạm Văn E','1991-9-1',N'Bắc Ninh', 'VN_05');
 
-
 insert into QLKH.dbo.Huongdan values 
 ('GV001','DT05','SV01','2020', '8'),
 ('GV012','DT04','SV02','2021', '9'),
@@ -101,24 +106,29 @@ insert into QLKH.dbo.Huongdan values
 ('GV010','DT01','SV15','2021', '8');
 
 --Cau 2
+--Đưa ra thông tin của giảng viên GV001
 Select * 
 from QLKH.dbo.Giangvien
 where "GV#" = 'GV001';
 
+-- Số đề tài của Thể loại ứng dụng
 Select count(*) AS sodetaiungdung
 from QLKH.dbo.Detai
 where TheLoai = N'Ứng dụng'
 
+-- In ra số sinh viên được hướng dẫn bởi GV012 quê ở hải phòng
 select count(*) sosinhvien
 from QLKH.dbo.Huongdan hd
 join QLKH.dbo.Sinhvien sv on sv."SV#" = hd."SV#"
 where hd.GV# = 'GV012' and sv.QueQuan = N'Hải Phòng'
 
+-- In ra đề tài rỗng
 select dt.TenDT
 from QLKH.dbo.Huongdan hd
  right join QLKH.dbo.Detai dt on dt.DT# = hd.DT#
 where hd.SV# IS NULL
 
+-- Update cho sinh vien sai dữ liệu
 UPDATE QLKH.dbo.Sinhvien
 SET NgaySinh = '1991-11-12'
 WHERE TenSV = N'Nguyễn Xuân Dũng' and QueQuan = N'Hải Phòng'
@@ -129,6 +139,7 @@ WHERE SV# = (select SV# from QLKH.dbo.Sinhvien
 DELETE FROM QLKH.dbo.Sinhvien
 WHERE TenSV = N'Nguyễn Văn Nam' and QueQuan = N'Bắc Giang'
 
+--Tạo View cho giảng viên và đề tài
 CREATE VIEW Gv_dt_view
 AS
 SELECT
@@ -138,16 +149,66 @@ FROM
 INNER JOIN QLKH.dbo.Huongdan hd 
     ON gv.GV# = hd.GV#
 INNER JOIN QLKH.dbo.Detai dt 
-    ON dt.DT# = hd.DT#
+    ON dt.DT# = hd.DT#;
 
 select TenDT, TheLoai, NamThucHien
 from Gv_dt_view
-where NamThucHien = '2022'
+where NamThucHien = '2022';
 
-CREATE CLUSTERED INDEX Gv_dt_view_index
+-- Tạo index cho view
+ALTER VIEW Gv_dt_view 
+WITH SCHEMABINDING 
+AS
+SELECT
+    gv.Hoten, dt.TenDT, dt.TheLoai, hd.NamThucHien
+FROM
+    QLKH.dbo.Giangvien gv
+INNER JOIN QLKH.dbo.Huongdan hd 
+    ON gv.GV# = hd.GV#
+INNER JOIN QLKH.dbo.Detai dt 
+    ON dt.DT# = hd.DT#;
+
+CREATE UNIQUE CLUSTERED INDEX Gv_dt_view_index
 ON Gv_dt_view(NamThucHien);
 
 CREATE NONCLUSTERED INDEX Gv_dt_view_non_index
 ON Gv_dt_view(NamThucHien);
 
 
+--cau 4
+--ý a
+--Tạo quyền cho giáo viên Nguyễn Văn Thủy
+create login ThuyNV 
+with password = 'thuy123';
+use QLKH
+create user ThuyNV for login ThuyNV
+grant select on QLKH.dbo.Giangvien to ThuyNV;
+grant select on QLKH.dbo.Huongdan to ThuyNV;
+
+--- tạo quyền cho giáo viên Trần Lâm Quân
+create login QuanTL 
+with password = 'quan123';
+use QLKH
+create user QuanTL for login QuanTL;
+grant create table to QuanTL;
+grant create view to QuanTL;
+
+--ý b
+---Tao nhóm quyền Duy_Cuong và thêm mọi quyền cho nhóm
+create role Duy_Cuong;
+use QLKH;
+grant all to Duy_Cuong;
+
+----Them user nguyễn duy tiến vào nhóm----
+create login NDTien 
+with password = 'Tien123';
+use QLKH
+create user NDTien for login NDTien;
+Sp_addRoleMember 'Duy_Cuong', 'NDTien';
+
+----Them user Pham Viet Cuong vao nhom---
+create login PVCuong 
+with password = 'Cuong123';
+use QLKH
+create user PVCuong for login PVCuong;
+Sp_addRoleMember 'Duy_Cuong', 'PVCuong';
