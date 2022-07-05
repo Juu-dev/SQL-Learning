@@ -125,6 +125,7 @@ insert into QLNV.dbo.PhanCong values
 
 --Query command--
 --I--
+--1--
 CREATE PROCEDURE QLKH_SP_1
 ( 
 @sd as decimal,
@@ -133,11 +134,161 @@ CREATE PROCEDURE QLKH_SP_1
 AS
 BEGIN
     SELECT *
-FROM 
-    QLNV.dbo.NhanVien nv1
-	left join QLNV.dbo.NhanVien nv2 on nv2.MaNV = nv1.Ma_NQL
-Where 
-	day(nv1.NgSinh) > @sd and day(nv1.NgSinh) < @ed
+	FROM 
+		QLNV.dbo.NhanVien nv1
+		left join QLNV.dbo.NhanVien nv2 on nv2.MaNV = nv1.Ma_NQL
+	Where 
+		day(nv1.NgSinh) > @sd and day(nv1.NgSinh) < @ed
 END;
 
+--2--
+CREATE PROCEDURE QLKH_SP_2
+AS
+BEGIN
+    select MaNV, HoNV + ' ' + TenLot + ' ' + Ten as HoTenNV, Luong 
+	from QLNV.dbo.NhanVien nv1
+		left join (select  PHG, avg(Luong) as AVG_Luong
+					from QLNV.dbo.NhanVien
+					group by PHG) as scan_tb 
+		on nv1.PHG =  scan_tb.PHG
+	where nv1.Luong > scan_tb.AVG_Luong
+END;
 
+--3--
+CREATE PROCEDURE QLKH_SP_3
+( 
+@top_n as int
+)
+AS
+BEGIN
+    SELECT top (@top_n) *
+	FROM 
+		QLNV.dbo.NhanVien nv
+	order by nv.Luong DESC
+END;
+
+--4--
+CREATE PROCEDURE QLKH_SP_4
+( 
+@city_par as varchar(30)
+)
+AS
+BEGIN
+	set @city_par = '%' + @city_par + '%'
+
+    update QLNV.dbo.NhanVien 
+	set Luong = Luong * 1.1
+	where Dchi like @city_par
+END;
+
+--5--
+CREATE PROCEDURE QLKH_SP_5
+AS
+BEGIN
+	Delete from QLNV.dbo.PhongBan
+	where MaPH = (select MaPH
+				from QLNV.dbo.PhongBan pb
+				left join QLNV.dbo.NhanVien nv
+				on pb.MaPH = nv.PHG
+				where nv.MaNV IS NULL)
+END;
+
+--II--
+--1--
+select MaNV, HoNV + ' ' + TenLot + ' ' + Ten as HoTenNV, Luong, AVG_Luong
+from QLNV.dbo.NhanVien nv1
+	left join (select  PHG, avg(Luong) as AVG_Luong
+				from QLNV.dbo.NhanVien
+				group by PHG) as scan_tb 
+on nv1.PHG =  scan_tb.PHG
+
+
+CREATE TRIGGER dbo.trigger_1_a
+ON QLNV.dbo.NhanVien
+AFTER  INSERT
+NOT FOR REPLICATION
+AS
+{
+	SET NOCOUNT ON;
+
+	delete from	QLNV.dbo.NhanVien
+	where (QLNV.dbo.NhanVien.PHG = (select  PHG
+					from QLNV.dbo.NhanVien
+					where PHG = 1
+					group by PHG
+					having AVG(Luong) > 50000)
+			AND
+			QLNV.dbo.NhanVien.MaNV = (select MaNV 
+						from inserted)
+			)
+};
+
+CREATE TRIGGER dbo.trigger_1_b
+ON QLNV.dbo.NhanVien
+AFTER  DELETE
+NOT FOR REPLICATION
+AS
+{
+	SET NOCOUNT ON;
+
+	insert into	QLNV.dbo.NhanVien
+	select * from deleted
+	where exists 
+			(select  PHG
+					from QLNV.dbo.NhanVien
+					where PHG = 1
+					group by PHG
+					having AVG(Luong) > 50000)
+};
+
+CREATE TRIGGER dbo.trigger_1_c
+ON QLNV.dbo.NhanVien
+AFTER  UPDATE
+NOT FOR REPLICATION
+AS
+{
+	SET NOCOUNT ON;
+	
+	with CTE_table_nv as (
+		select  PHG 
+		from QLNV.dbo.NhanVien
+		where PHG = 1
+		group by PHG
+		having AVG(Luong) > 50000
+	)
+
+	insert into	QLNV.dbo.NhanVien
+	select * from deleted
+	where exists 
+			(select * from CTE_table_nv)
+
+	delete from	QLNV.dbo.NhanVien
+	where (QLNV.dbo.NhanVien.PHG = (select PHG from CTE_table_nv)
+			AND
+			QLNV.dbo.NhanVien.MaNV = (select MaNV 
+						from inserted)
+			)
+};
+
+--2--
+create trigger dbo.trigger_2a
+ON QLNV.dbo.NhanVien
+AFTER  insert
+NOT FOR REPLICATION
+AS
+{
+	declare @head int
+	set @head = (	select nv.Luong
+					from QLNV.dbo.NhanVien nv
+					join QLNV.dbo.PhongBan pb
+					on nv.MaNV = pb.TRPHG
+					where nv.PHG = (select PHG from inserted))
+
+	declare @new_emp int
+	set @new_emp = (select Luong from inserted)
+
+	delete from	QLNV.dbo.NhanVien
+	where (	@head < @new_emp
+			AND
+			QLNV.dbo.NhanVien.MaNV = (select MaNV from inserted))
+}
