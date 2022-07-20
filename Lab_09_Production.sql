@@ -80,6 +80,7 @@ insert into Production.dbo.products values
 ('PD20', 'Orange juice', 'BD05', 'CG10', '2022-6-7', '20000');
 
 --b--
+--b.1--
 create view v_product
 as
 select pd.product_id, pd.product_name, pd.model_year, pd.list_price, bd.brand_name, cg.category_name
@@ -87,16 +88,35 @@ from Production.dbo.products pd
 join Production.dbo.categories cg on pd.category_id = cg.category_id
 join Production.dbo.brands bd on pd.brand_id = bd.brand_id;
 
+--b.2--
 select *
 from v_product
 where year(model_year) = 2022;
 
+--b.3--
+alter view v_product
+as
+select pd.product_id, pd.product_name, pd.model_year, pd.list_price, bd.brand_name, cg.category_name
+from Production.dbo.products pd
+join Production.dbo.categories cg on pd.category_id = cg.category_id
+join Production.dbo.brands bd on pd.brand_id = bd.brand_id
+where pd.list_price > 100000;
+
+
+--b.4--
+--clustered index--
+drop clustered index pd_pd_name_cls_index
+on Production.dbo.products;
 create clustered index pd_pd_name_cls_index
 on Production.dbo.products(product_name);
-
+--nonclustered index
+drop nonclustered index pd_pd_name_ncls_index
+on Production.dbo.products;
 create nonclustered index pd_pd_name_ncls_index
 on Production.dbo.products(product_name);
-
+--performance test--
+select * from Production.dbo.products
+where product_name = 'Golf clubs'
 --c--
 begin transaction Production_Week12;
 save transaction SP01;

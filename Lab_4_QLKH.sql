@@ -1,4 +1,5 @@
 ﻿--Laboratory Exercise--
+--A--
 create database QLKH_DB;
 
 select * from QLKH_DB.dbo.GiangVien;
@@ -57,6 +58,7 @@ insert into QLKH_DB.dbo.ThamGia values
 ('GV03','DT03',150),
 ('GV04','DT04',180);
 
+--B--
 --Query cmd--
 --1--
 select *
@@ -156,6 +158,7 @@ delete from  QLKH_DB.dbo.GiangVien
 where GV# = 'GV02';
 
 
+--C--
 -- Sao lưu và phục hồi CSDL
 --1. Sao lưu
 --SYNTAX: backup database Tên_Cơ_Sở_Dữ_Liệu to disk = 'đường dẫn\Tên_file.bak'
@@ -165,3 +168,33 @@ backup database QLKH_DB to disk = 'E:\SQL_SERVER\Backup_DTB\QLKH_DB.bak';
 --SYNTAX: restore database Tên_Cơ_Sở_Dữ_Liệu from disk = 'Đường dẫn\Tên_File.bak' [With NoRecovery]
 --Error đã xảy ra: Khi restore vào CSDL mới mà chưa xóa CSDL cũ thì sẽ gây xung đột quyền sở hữu, có 2 cách giải quyết, 1 là xóa CSDL cũ, 2 là xóa tên CSDL mới và thay bằng tên cũ
 restore database QLKH_DB from disk = 'E:\SQL_SERVER\Backup_DTB\QLKH_DB.bak';
+
+--D--
+--tao tai khoan dang nhap--
+--Ngo Tuan Phong--
+Create login PhongNT with password = 'phong123';
+use QLKH_DB;
+create user PhongNT for login PhongNT;
+--Nguyen Hong Phuong--
+Create login PhuongNH with password = 'phuong123';
+use QLKH_DB;
+create user PhuongNH for login PhuongNH;
+--Cap Quyen cho user--
+grant select on QLKH_DB.dbo.GiangVien to PhongNT;
+grant select on QLKH_DB.dbo.ThamGia to PhongNT;
+grant create table to PhuongNH;
+grant create view to PhuongNH;
+--Tao nhom quyen gom 2 giang vien Vu Tuyet Trinh va Tran Duc Khanh--
+--Tao tai khoan dang nhap cho Vu Tuyet Trinh va Tran Duc Khanh--
+create login TrinhVT with password = 'Trinh123';
+create login KhanhTD with password = 'Khanh123';
+use QLKH_DB;
+create user TrinhVT;
+create user KhanhTD;
+--Tao nhom quyen--
+create role Trinh_Khanh;
+alter role Trinh_Khanh add member TrinhVT;
+alter role Trinh_Khanh add member KhanhTD;
+--Cap quyen cho nhom quyen--
+grant all to Trinh_Khanh;
+
