@@ -119,6 +119,9 @@ select * from Production.dbo.products
 where product_name = 'Golf clubs'
 --c--
 begin transaction Production_Week12;
+
+select * from Production.dbo.brands where brand_name = 'chanel';
+
 save transaction SP01;
 
 update Production.dbo.products
@@ -126,5 +129,7 @@ set list_price = 100000 + (select list_price
 							from Production.dbo.products
 							where product_name = 'UNIQLO')
 where product_name = 'UNIQLO';
+
 save transaction SP02;
+
 rollback transaction SP01;
